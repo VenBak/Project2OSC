@@ -1,0 +1,8 @@
+[
+{
+  "directory": "/home/boldi/Project2OSC/build",
+  "command": "/usr/bin/g++    -Wall -O2 -g -g -std=gnu++14 -o CMakeFiles/prime.dir/main.cpp.o -c /home/boldi/Project2OSC/main.cpp",
+  "file": "/home/boldi/Project2OSC/main.cpp",
+  "output": "CMakeFiles/prime.dir/main.cpp.o"
+}
+]
