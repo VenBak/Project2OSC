@@ -22,11 +22,14 @@ using namespace std;
 vector<int> buffer;
 vector<string> logger;
 int buffer_size = 0;
+mutex printbuf_and_log;
+mutex add_el, remove_el;
 
 void print_buffer(vector<int>&  buffer) {
   cout << "The buffer_size is: " << buffer_size << endl;
   cout << "The buffer.size() is: " <<  int(buffer.size()) << endl;
   cout << "The buffer contains: " << endl;
+  printbuf_and_log.lock();
   for (int i = 0; i < int(buffer.size()); i++) {
     cout << i << ": " << buffer.at(i) << endl;
     if (int(buffer.size()) == 0) {
@@ -40,50 +43,22 @@ void print_buffer(vector<int>&  buffer) {
       cout << "Nothing was logged" << endl;
     }
   }
+  printbuf_and_log.unlock();
+
+
 }
 
 
-string logged(bool process) {
+void log(string process_name, bool process) {
+  string s = "";
   if (process) {
-    return "Succeded";
+    s = process_name + "Succeeded";
+    logger.push_back(s);
   } else {
-    return "Failed";
+    s = process_name + "Failed";
+    logger.push_back(s);
   }
 }
-
-// string bounded_prompt () {
-
-// }
-
-
-// void remove(vector<int>&  buffer) {
-
-//   if (int(buffer.size()) != 0) {
-//     buffer.erase(buffer.begin());
-//     for (int i = 0; i < int(buffer.size()); i++) {
-//       buffer[i] = buffer[i+1];
-//     }
-//     logged(true);
-//   } else {
-//     logged(false);
-//   }
-// }
-
-// void add(vector<int>&  buffer) {
-//   int element;
-//   cout << "What do you wish to add to the buffer:" << endl;
-//   cin >> element;
-//   if (int(buffer.size()) < buffer_size) {
-//     buffer.push_back(element);
-//     // print_buffer(buffer);
-//     cout << "Entered: " << element << endl;
-//     print_buffer(buffer);
-//   } else {
-//     // return logged(false);
-//     cout << "Out of bounds" << endl;
-//     print_buffer(buffer);
-//   }
-// }
 
 void bounded_operation(vector<int>&  buffer, vector<string>&  logger) {
   int option = 0;
@@ -99,30 +74,30 @@ void bounded_operation(vector<int>&  buffer, vector<string>&  logger) {
       int element;
       cout << "What do you wish to add to the buffer:" << endl;
       cin >> element;
+      add_el.lock();
       if (int(buffer.size()) < buffer_size) {
         // Add element to buffer
         buffer.push_back(element);
         cout << "Entered: " << element << endl;
-        // Add operation to loggere
-        logger.push_back("Success");
-        // Call for next prompt
-        bounded_operation(buffer,logger);
+        log("Addition:", true);
       } else {
         cout << "Out of bounds" << endl;
-        logger.push_back("Failure");
-        bounded_operation(buffer,logger);
+        log("Addition", false);
       }
+      add_el.unlock();
+      // Call for next prompt
+      bounded_operation(buffer, logger);
       break;
     case 2:
+      remove_el.lock();
       if (int(buffer.size()) != 0) {
         buffer.erase(buffer.begin());
-        logger.push_back("Success");
-        bounded_operation(buffer, logger);
       } else {
         cout << "The buffer is empty: " << endl;
-        logger.push_back("Failure");
-        bounded_operation(buffer, logger);
       }
+      (int(buffer.size()) != 0) ? log("Remove:", true) : log("Remove", false);
+      remove_el.unlock();
+      bounded_operation(buffer, logger);
       break;
     case 3:
       print_buffer(buffer);
@@ -136,11 +111,53 @@ void bounded_operation(vector<int>&  buffer, vector<string>&  logger) {
 void bounded() {
   cout << "How large should the buffer be?:" << endl;
   cin >> buffer_size;
+  cout << "buffer size is:" << buffer_size << endl;
   bounded_operation(buffer,logger);
 }
 
-void unbounded() {
-  
+void unbounded_operation() {
+  int option = 0;
+
+  cout << "Which operation do you which to perform: " << endl;
+  cout << "1. Add" << endl;
+  cout << "2. Remove" << endl;
+  cout << "3. Exit" << endl;
+  cin >> option;
+  switch (option)
+  {
+    case 1:
+      int prev_size = buffer.size();
+      int element;
+      cout << "What do you wish to add to the buffer:" << endl;
+      cin >> element;
+      add_el.lock();
+      // Add element to buffer
+      buffer.push_back(element);
+      cout << "Entered: " << element << endl;
+      if ((prev_size + 1) != buffer.size())
+        log("Addition: ", false);
+      // Add operation to loggere
+      log("Addition: ", true);
+      add_el.unlock();
+      // Call for next prompt
+      unbounded_operation();
+      break;
+    case 2:
+      remove_el.lock();
+      if (int(buffer.size()) != 0) {
+        buffer.erase(buffer.begin());
+      } else {
+        cout << "The buffer is empty: " << endl;
+      }
+      (int(buffer.size()) != 0) ? log("Remove:", true) : log("Remove", false);
+      remove_el.unlock();
+      // Call for next prompt
+      unbounded_operation();
+      break;
+    case 3:
+      print_buffer(buffer);
+      break;
+  }
 }
 
 int main(int argc, char* argv[]) {
@@ -157,7 +174,7 @@ int main(int argc, char* argv[]) {
       bounded();
       break;
     case 2:
-      unbounded();
+      unbounded_operation();
       break;
   }
   return 0;
