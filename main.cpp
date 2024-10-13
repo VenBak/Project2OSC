@@ -15,6 +15,7 @@
 #include <ostream>
 #include <thread>
 #include <vector>
+#include <unistd.h>
 
 // although it is good habit, you don't have to type 'std::' before many objects by including this line
 using namespace std;
@@ -59,16 +60,14 @@ void log(string process_name, bool process) {
   }
 }
 
-void unrestricted_addition(vector<int>& buffer, int& element) {
-  int prev_size = buffer.size();
+void unrestricted_addition(vector<int>& buffer, int& element) { 
   add_el.lock();
+  int prev_size;
+  prev_size = buffer.size();
   // Add element to buffer
   buffer.push_back(element);
   cout << "Entered: " << element << endl;
-  if ((prev_size + 1) != buffer.size())
-    log("Addition: ", false);
-  // Add operation to loggere
-  log("Addition: ", true);
+  ((prev_size + 1) != (int)buffer.size()) ? log("Addition: ", false) : log("Addition: ", true);
   add_el.unlock();
 }
 
@@ -161,7 +160,7 @@ void unbounded_operation() {
   }
 }
 
-int main(int argc, char* argv[]) {
+void default_functionality() {
   cout << "Do you want an unbounded or bounded buffer? :" << endl;
   int option = 0;
   cout << "Please choose a number: " << endl;
@@ -178,5 +177,52 @@ int main(int argc, char* argv[]) {
       unbounded_operation();
       break;
   }
+}
+
+void thread_logging(string thread_name, string function_name){
+  cout << thread_name << ": " << function_name << endl;
+}
+
+void first_thread(string tn) {
+  thread_logging(tn, "Addition");
+  int nr = 8;
+  restricted_addition(buffer, nr);
+  sleep(5);
+  thread_logging(tn, "Addition");
+  nr = 9;
+  restricted_addition(buffer, nr);
+  thread_logging(tn, "Addition");
+  nr = 487548725;
+  restricted_addition(buffer, nr);
+}
+
+void second_thread(string tn) {
+  thread_logging(tn, "Addition");
+  int nr = 7;
+  restricted_addition(buffer, nr);
+  thread_logging(tn, "Remove");
+  remove(buffer);
+  thread_logging(tn, "Remove");
+  remove(buffer);
+  thread_logging(tn, "Addition");
+  nr = 76;
+  restricted_addition(buffer, nr);
+}
+
+void test1(int test_size) {
+  buffer_size = test_size;
+  cout << "Test1: buffer size is:" << buffer_size << endl;
+  cout << "Test1: thread 1 is called" << endl;
+  thread t1(first_thread, "First_thread");
+  cout << "Test1: thread 2 is called" << endl;
+  thread t2(second_thread, "Second_thread");
+  cout << "Test1: wait for threads to finish" << endl;
+  t1.join();
+  t2.join();
+  cout << "Test1: threads are finished" << endl;
+}
+
+int main(int argc, char* argv[]) {
+  test1(5);
   return 0;
 }
