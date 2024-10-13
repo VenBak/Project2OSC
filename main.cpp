@@ -22,6 +22,7 @@ using namespace std;
 vector<int> buffer;
 vector<string> logger;
 int buffer_size = 0;
+int unbounded_buffer_index = 0;
 mutex printbuf_and_log;
 mutex add_el, remove_el;
 
@@ -126,18 +127,18 @@ void unbounded_operation() {
   switch (option)
   {
     case 1:
-      int prev_size = buffer.size();
       int element;
       cout << "What do you wish to add to the buffer:" << endl;
       cin >> element;
       add_el.lock();
+      // CRITICAL SECTION
+      int check_value;
+      check_value = (int) buffer.size();
+      unbounded_buffer_index++;
       // Add element to buffer
       buffer.push_back(element);
       cout << "Entered: " << element << endl;
-      if ((prev_size + 1) != buffer.size())
-        log("Addition: ", false);
-      // Add operation to loggere
-      log("Addition: ", true);
+      (check_value + 1 == unbounded_buffer_index) ? log("Addition: ", true) : log("Addition", false);
       add_el.unlock();
       // Call for next prompt
       unbounded_operation();
