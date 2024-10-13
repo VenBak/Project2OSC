@@ -24,7 +24,7 @@ vector<int> buffer;
 vector<string> logger;
 int buffer_size = 0;
 mutex printbuf_and_log;
-mutex add_el, remove_el;
+mutex add_rem_el;
 
 void print_buffer(vector<int>&  buffer) {
   cout << "The buffer_size is: " << buffer_size << endl;
@@ -61,18 +61,21 @@ void log(string process_name, bool process) {
 }
 
 void unrestricted_addition(vector<int>& buffer, int& element) { 
-  add_el.lock();
   int prev_size;
+  add_rem_el.lock();
+  /************ CRTICAL SECTION: START ***************/
   prev_size = buffer.size();
   // Add element to buffer
   buffer.push_back(element);
   cout << "Entered: " << element << endl;
   ((prev_size + 1) != (int)buffer.size()) ? log("Addition: ", false) : log("Addition: ", true);
-  add_el.unlock();
+  /************ CRTICAL SECTION: END ***************/
+  add_rem_el.unlock();
 }
 
 void restricted_addition(vector<int>& buffer, int& element) {
-  add_el.lock();
+  add_rem_el.lock();
+  /************ CRTICAL SECTION: START ***************/
   if (int(buffer.size()) < buffer_size) {
     // Add element to buffer
     buffer.push_back(element);
@@ -82,18 +85,21 @@ void restricted_addition(vector<int>& buffer, int& element) {
     cout << "Out of bounds" << endl;
     log("Addition", false);
   }
-  add_el.unlock();
+  /************ CRTICAL SECTION: END ***************/
+  add_rem_el.unlock();
 }
 
 void remove(vector<int>& buffer) {
-  remove_el.lock();
+  add_rem_el.lock();
+  /************ CRTICAL SECTION: START ***************/
   if (int(buffer.size()) != 0) {
     buffer.erase(buffer.begin());
   } else {
     cout << "The buffer is empty: " << endl;
   }
   (int(buffer.size()) != 0) ? log("Remove:", true) : log("Remove", false);
-  remove_el.unlock();
+  /************ CRTICAL SECTION: END ***************/
+  add_rem_el.unlock();
 }
 
 void bounded_operation(vector<int>&  buffer, vector<string>&  logger) {
@@ -318,7 +324,16 @@ void test3_more_threads(string test_name){
   t4.join();
   function_logging(test_name, "threads are finished");
 }
-
+void test4_add_out_of_bound(string test_name){
+  function_logging(test_name, "was called.");
+  buffer_size=1;
+  int nr = 8;
+  restricted_addition(buffer, nr);
+  function_logging(test_name, "Addition");
+  nr = 9;
+  restricted_addition(buffer, nr);
+  thread_logging(test_name, "Addition");
+}
 /*****************TEST FUNCTIONS- END*********************/
 
 int main(int argc, char* argv[]) {
@@ -326,5 +341,6 @@ int main(int argc, char* argv[]) {
   clean_buffer();
   test2_remove_out_of_bound("Test2", 1);
   test3_more_threads("Test3");
+  test4_add_out_of_bound("Test4");
   return 0;
 }
