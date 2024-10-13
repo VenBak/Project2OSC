@@ -15,6 +15,7 @@
 #include <ostream>
 #include <thread>
 #include <vector>
+#include <unistd.h>
 
 // although it is good habit, you don't have to type 'std::' before many objects by including this line
 using namespace std;
@@ -59,16 +60,14 @@ void log(string process_name, bool process) {
   }
 }
 
-void unrestricted_addition(vector<int>& buffer, int& element) {
-  int prev_size = buffer.size();
+void unrestricted_addition(vector<int>& buffer, int& element) { 
   add_el.lock();
+  int prev_size;
+  prev_size = buffer.size();
   // Add element to buffer
   buffer.push_back(element);
   cout << "Entered: " << element << endl;
-  if ((prev_size + 1) != buffer.size())
-    log("Addition: ", false);
-  // Add operation to loggere
-  log("Addition: ", true);
+  ((prev_size + 1) != (int)buffer.size()) ? log("Addition: ", false) : log("Addition: ", true);
   add_el.unlock();
 }
 
@@ -161,7 +160,7 @@ void unbounded_operation() {
   }
 }
 
-int main(int argc, char* argv[]) {
+void default_functionality() {
   cout << "Do you want an unbounded or bounded buffer? :" << endl;
   int option = 0;
   cout << "Please choose a number: " << endl;
@@ -178,5 +177,154 @@ int main(int argc, char* argv[]) {
       unbounded_operation();
       break;
   }
+}
+
+/*****************TEST FUNCTIONS- START*********************/
+
+void function_logging(string function_name, string op_name){
+  cout << function_name << ": " << op_name << endl;
+}
+
+void thread_logging(string thread_name, string op_name){
+  cout << thread_name << ": " << op_name << endl;
+}
+
+void first_thread(string tn) {
+  int nr = 8;
+  restricted_addition(buffer, nr);
+  thread_logging(tn, "Addition");
+  sleep(5);
+  nr = 9;
+  restricted_addition(buffer, nr);
+  thread_logging(tn, "Addition");
+  nr = 487548725;
+  restricted_addition(buffer, nr);
+  thread_logging(tn, "Addition");
+}
+
+void second_thread(string tn) {
+  int nr = 7;
+  restricted_addition(buffer, nr);
+  thread_logging(tn, "Addition");
+  remove(buffer);
+  thread_logging(tn, "Remove");
+  remove(buffer);
+  thread_logging(tn, "Remove");
+  nr = 76;
+  restricted_addition(buffer, nr);
+  thread_logging(tn, "Addition");
+}
+
+void test1_shared_bounded_buffer(string test_name, int test_size) {
+  buffer_size = test_size;
+  function_logging(test_name, "was called.");
+  cout << "Test1: buffer size is:" << buffer_size << endl;
+  function_logging(test_name, "Thread 1 is called");
+  thread t1(first_thread, "First_thread");
+  function_logging(test_name, "Thread 2 is called");
+  thread t2(second_thread, "Second_thread");
+  function_logging(test_name, "wait for threads to finish");
+  t1.join();
+  t2.join();
+  function_logging(test_name, "threads are finished");
+}
+
+void clean_buffer(){
+  for(int i=buffer.size(); i > 0; i--){
+    remove(buffer);
+    function_logging("Clean buffer", "Remove");
+  }
+}
+
+void test2_remove_out_of_bound(string test_name, int test_size){
+  buffer_size = test_size;
+  int nr = 7;
+  restricted_addition(buffer, nr);
+  remove(buffer);
+  remove(buffer);
+}
+
+void thread1_unrestricted(string tn){
+  int nr = 635673;
+  unrestricted_addition(buffer, nr);
+  thread_logging(tn, "Addition");
+  sleep(3);
+  remove(buffer);
+  thread_logging(tn, "Remove");
+}
+
+void thread2_unrestricted(string tn){
+  int nr = 444;
+  unrestricted_addition(buffer, nr);
+  thread_logging(tn, "Addition");
+  remove(buffer);
+  thread_logging(tn, "Remove");
+  sleep(3);
+  remove(buffer);
+  nr = 235;
+  unrestricted_addition(buffer, nr);
+  thread_logging(tn, "Addition");
+  nr = 1;
+  unrestricted_addition(buffer, nr);
+  thread_logging(tn, "Addition");
+}
+
+void thread3_unrestricted(string tn){
+  remove(buffer);
+  thread_logging(tn, "Remove");
+  remove(buffer);
+  thread_logging(tn, "Remove");
+  remove(buffer);
+  thread_logging(tn, "Remove");
+  sleep(4);
+  int nr = 666;
+  unrestricted_addition(buffer, nr);
+  thread_logging(tn, "Addition");
+  nr = 1345;
+  unrestricted_addition(buffer, nr);
+  thread_logging(tn, "Addition");
+}
+
+void thread4_unrestricted(string tn){
+  int nr = 21;
+  unrestricted_addition(buffer, nr);
+  thread_logging(tn, "Addition");
+  nr = 45;
+  unrestricted_addition(buffer, nr);
+  thread_logging(tn, "Addition");
+  remove(buffer);
+  thread_logging(tn, "Remove");
+  remove(buffer);
+  thread_logging(tn, "Remove");
+  remove(buffer);
+  thread_logging(tn, "Remove");
+  sleep(4);
+}
+
+void test3_more_threads(string test_name){
+  function_logging(test_name, "was called.");
+  function_logging(test_name, "Thread 1 is called");
+  thread t1(thread1_unrestricted, "First_thread");
+  function_logging(test_name, "Thread 2 is called");
+  thread t2(thread2_unrestricted, "Second_thread");
+  function_logging(test_name, "Thread 3 is called");
+  thread t3(thread3_unrestricted, "Third_thread");
+  function_logging(test_name, "Thread 4 is called");
+  thread t4(thread4_unrestricted, "Fourth_thread");
+  function_logging(test_name, "wait for threads to finish");
+  t1.join();
+  t2.join();
+  t3.join();
+  t4.join();
+  function_logging(test_name, "threads are finished");
+}
+
+/*****************TEST FUNCTIONS- END*********************/
+
+int main(int argc, char* argv[]) {
+  test1_shared_bounded_buffer("Test1", 5);
+  clean_buffer();
+  test2_remove_out_of_bound("Test2", 1);
+  test3_more_threads("Test3");
   return 0;
 }
